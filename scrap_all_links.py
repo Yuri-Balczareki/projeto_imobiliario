@@ -1,11 +1,8 @@
-
 import numpy as np
 import time 
-import json                     # para salvar os dados
-import time 
-import re, time, os 
 
-import requests
+import argparse
+import os 
 import pandas as pd
 import csv
 from bs4 import BeautifulSoup
@@ -24,8 +21,10 @@ from selenium.webdriver.chrome.service import Service
 
 class RentScraper:
     def __init__(self):
+        self.options = webdriver.ChromeOptions()
+        self.options.add_experimental_option('excludeSwitches', ['enable-logging'])
         self.service = Service(ChromeDriverManager().install())
-        self.driver = webdriver.Chrome(service=self.service)
+        self.driver = webdriver.Chrome(service=self.service,  options=self.options)
         self.driver.maximize_window() 
         
     def accept_cookies(self):
@@ -109,12 +108,23 @@ class RentScraper:
                 writer.writerow([entry])
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Scrape rental/sales property links.")
+    parser.add_argument("--url", type=str, help="The URL to scrape property links from.")
+    parser.add_argument("--filename", type=str, help="The name of the CSV file to save the links.")
+    args = parser.parse_args()
+
+    # Creating the directory if it doesn't exist
+    data_dir = "data/links"
+    os.makedirs(data_dir, exist_ok=True)
+
+    # Constructing the full CSV file path
+    csv_path = os.path.join(data_dir, args.filename + ".csv")
+
     scraper = RentScraper()
-    #url = 'https://www.vivareal.com.br/aluguel/santa-catarina/florianopolis/#onde=Brasil,Santa%20Catarina,Florian%C3%B3polis,,,,,,BR%3ESanta%20Catarina%3ENULL%3EFlorianopolis,,,'
-    url = 'https://www.vivareal.com.br/aluguel/santa-catarina/sao-jose/bairros/kobrasol/apartamento_residencial/#onde=Brasil,Santa%20Catarina,S%C3%A3o%20Jos%C3%A9,Bairros,Kobrasol,,,,BR%3ESanta%20Catarina%3ENULL%3ESao%20Jose%3EBarrios%3EKobrasol,,,&preco-ate=2500&preco-total=sim'
-    links, report = scraper.scrape_links(url)
+    links, report = scraper.scrape_links(args.url)
     scraper.close()
 
-        
-    scraper.save_links_to_csv(links, "links_sales_florianopolis.csv")
-    scraper.save_report_to_csv(report, "report.csv")
+    scraper.save_links_to_csv(links, csv_path)
+    scraper.save_report_to_csv(report, os.path.join(data_dir, "report.csv"))
+
+    print(f"Links saved to {csv_path}")
